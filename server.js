@@ -1,86 +1,59 @@
 const express = require('express');
-const knex = require('knex');
-
-const dbConnect = knex({
-    client: 'sqlite3',
-    connection: {
-        filename: './data/budget.db3',
-    },
-    useNullAsDefault: true
-})
+const Accounts = require('./data/accounts-model.js');
 
 const server = express();
 
 // your code here
 server.use(express.json());
 
-server.get('/', (req, res) => {
-    // use knex get the data from the database
-    // select * from posts
-    // dbConnection.select('*').from('posts')
-    dbConnect('accounts')
-      .then(accounts => {
+server.get('/', async (req, res) => {
+    try{
+        const accounts =  await Accounts.find();
         res.status(200).json(accounts);
-      })
-      .catch(error => {
-        res.status(500).json(error);
-      });
-  });
+    }catch(err){
+        console.log(err);
+        res.status(500).json({
+            message: "Error retrieving accounts"
+        })
+    }
+});
 
-  server.get('/:id', (req, res) => {
-    dbConnect('accounts')
-      .where({ id: req.params.id })
-      .first()
-      .then(account => {
-        if (account) {
-          res.status(200).json(account);
-        } else {
-          res.status(404).json({ message: 'not found' });
+server.post('/', async (req, res) => {
+    try{
+        const account = await Accounts.add(req.body);
+        res.status(200).json(account);
+    }catch(err){
+        console.log(err);
+        res.status(500).json({ message: "Error adding account"})
+    }
+    
+});
+
+server.put('/:id', async (req, res) => {
+    try{
+        const account = await Accounts.update(req.params.id, req.body)
+        if(account){
+            res.status(200).json(account);
+        } else{
+            res.status(404).json({ message: "The account could not be updated"})
         }
-      })
-      .catch(error => res.status(500).json(error));
-  });
+    } catch(err){
+        console.log(err);
+        res.status(500).json({ message: "Error updating account" })
+    }
+});
 
-  server.post('/', (req, res) => {
-    // insert into posts () values ()
-  
-    const account = req.body;
-  
-    dbConnect('accounts')
-      .insert(account, 'id')
-      .then(arrayOfIds => {
-        // arrayOfIds = [ id of the last record inserted ]
-        const lastRecord = arrayOfIds[0];
-  
-        res.status(201).json(lastRecord);
-      })
-      .catch(error => res.status(500).json(error));
-  });
-
-  server.put('/:id', (req, res) => {
-    dbConnect('accounts')
-      .where({ id: req.params.id })
-      .update(req.body)
-      .then(count => {
-        if (count > 0) {
-          res.status(200).json({ message: `${count} record(s) updated` });
-        } else {
-          res.status(404).json({ message: 'not found' });
+server.delete('/:id', async (req, res) => {
+    try{
+        const count = await Accounts.remove(req.params.id);
+        if(count>0){
+            res.status(200).json({ message: 'THe account has been deleted' })
+        }else{
+            res.status(404).json({ message: "The account could not be found" })
         }
-      })
-      .catch(error => res.status(500).json(error));
-  });
-
-  server.delete('/:id', (req, res) => {
-    // delete from posts where id = 14
-    dbConnect('accounts')
-      .where({ id: req.params.id })
-      .del()
-      .then(count => {
-        res.status(200).json({ message: `${count} record(s) deleted` });
-        // res.status(204).end();
-      })
-      .catch(error => res.status(500).json(error));
-  });
-
+    } catch(err){
+        console.log(err);
+        res.status(500).json({ message: "Error removing account" })
+    }
+});
 module.exports = server;
